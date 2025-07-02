@@ -6,14 +6,18 @@ import {
   UserGroupIcon,
   PlusIcon,
   EyeIcon,
-  PencilIcon,
-  TrashIcon,
   PhoneIcon,
   EnvelopeIcon,
   ChatBubbleLeftRightIcon,
-  FunnelIcon,
   MagnifyingGlassIcon,
-  AdjustmentsHorizontalIcon
+  ChartBarIcon,
+  LightBulbIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  QuestionMarkCircleIcon,
+  CurrencyEuroIcon,
+  CalendarDaysIcon,
+  FireIcon
 } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 
@@ -22,581 +26,648 @@ interface Lead {
   name: string
   email: string
   phone: string
-  status: 'hot' | 'warm' | 'cold' | 'new' | 'contacted' | 'qualified' | 'converted'
+  status: 'neu' | 'kontaktiert' | 'interessiert' | 'kunde'
   source: string
   category: string
-  score: number
+  erfolgswahrscheinlichkeit: number
   lastContact: string
   created: string
   notes: string
   company?: string
-  value: number
+  wert: number
   nextAction: string
-  assignedTo: string
+  qualitaet: 'sehr gut' | 'gut' | 'okay' | 'schlecht'
+}
+
+function StatusIcon({ status }: { status: string }) {
+  if (status === 'neu') return <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+  if (status === 'kontaktiert') return <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+  if (status === 'interessiert') return <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+  if (status === 'kunde') return <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+  return <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const statusConfig = {
-    hot: { bg: 'bg-red-100', text: 'text-red-800', label: 'Heiß' },
-    warm: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Warm' },
-    cold: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Kalt' },
-    new: { bg: 'bg-green-100', text: 'text-green-800', label: 'Neu' },
-    contacted: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Kontaktiert' },
-    qualified: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Qualifiziert' },
-    converted: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'Konvertiert' }
+  const config = {
+    'neu': { bg: 'bg-blue-100', text: 'text-blue-800', emoji: '🆕', label: 'Neu' },
+    'kontaktiert': { bg: 'bg-yellow-100', text: 'text-yellow-800', emoji: '📞', label: 'Kontaktiert' },
+    'interessiert': { bg: 'bg-orange-100', text: 'text-orange-800', emoji: '🔥', label: 'Interessiert' },
+    'kunde': { bg: 'bg-green-100', text: 'text-green-800', emoji: '🎉', label: 'Kunde geworden' }
   }
   
-  const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.new
+  const c = config[status as keyof typeof config] || config.neu
   
   return (
-    <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
-      {config.label}
+    <span className={`px-3 py-1 rounded-full text-xs font-medium ${c.bg} ${c.text} flex items-center gap-1`}>
+      <span>{c.emoji}</span>
+      {c.label}
     </span>
   )
 }
 
-function LeadScore({ score }: { score: number }) {
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600 bg-green-100'
-    if (score >= 60) return 'text-yellow-600 bg-yellow-100'
-    if (score >= 40) return 'text-orange-600 bg-orange-100'
+function QualitaetsBadge({ qualitaet }: { qualitaet: string }) {
+  const config = {
+    'sehr gut': { bg: 'bg-green-100', text: 'text-green-800', emoji: '🌟', label: 'Top-Interessent!' },
+    'gut': { bg: 'bg-blue-100', text: 'text-blue-800', emoji: '👍', label: 'Guter Kontakt' },
+    'okay': { bg: 'bg-yellow-100', text: 'text-yellow-800', emoji: '⚠️', label: 'Geht so' },
+    'schlecht': { bg: 'bg-red-100', text: 'text-red-800', emoji: '😔', label: 'Wenig Interesse' }
+  }
+  
+  const c = config[qualitaet as keyof typeof config] || config.okay
+  
+  return (
+    <span className={`px-3 py-1 rounded-full text-xs font-medium ${c.bg} ${c.text} flex items-center gap-1`}>
+      <span>{c.emoji}</span>
+      {c.label}
+    </span>
+  )
+}
+
+function ErfolgsAnzeige({ wahrscheinlichkeit }: { wahrscheinlichkeit: number }) {
+  const getColor = () => {
+    if (wahrscheinlichkeit >= 80) return 'text-green-600 bg-green-100'
+    if (wahrscheinlichkeit >= 60) return 'text-orange-600 bg-orange-100'
+    if (wahrscheinlichkeit >= 40) return 'text-yellow-600 bg-yellow-100'
     return 'text-red-600 bg-red-100'
   }
   
   return (
-    <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getScoreColor(score)}`}>
-      {score}/100
+    <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getColor()}`}>
+      {wahrscheinlichkeit}% Erfolgschance
     </div>
   )
 }
 
 export default function LeadsPage() {
-  const [leads, setLeads] = useState<Lead[]>([
+  const [showHelp, setShowHelp] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  
+  const [leads] = useState<Lead[]>([
     {
       id: 1,
       name: 'Anna Müller',
       email: 'anna.mueller@email.com',
       phone: '+49 151 1234567',
-      status: 'hot',
-      source: 'Facebook Ads',
+      status: 'interessiert',
+      source: 'Facebook Werbung',
       category: 'Altersvorsorge',
-      score: 85,
+      erfolgswahrscheinlichkeit: 85,
       lastContact: '2024-01-20',
       created: '2024-01-18',
       notes: 'Sehr interessiert an Riester-Rente. Möchte Beratungstermin nächste Woche.',
       company: 'Müller GmbH',
-      value: 2500,
+      wert: 2500,
       nextAction: 'Beratungstermin vereinbaren',
-      assignedTo: 'Max Mustermann'
+      qualitaet: 'sehr gut'
     },
     {
       id: 2,
       name: 'Thomas Weber',
       email: 'thomas.weber@email.com',
       phone: '+49 152 9876543',
-      status: 'warm',
-      source: 'Google Ads',
-      category: 'Baufinanzierung',
-      score: 72,
+      status: 'kontaktiert',
+      source: 'Google Werbung',
+      category: 'Hausfinanzierung',
+      erfolgswahrscheinlichkeit: 72,
       lastContact: '2024-01-19',
       created: '2024-01-17',
       notes: 'Sucht Baufinanzierung für Einfamilienhaus. Budget 450.000 €.',
-      value: 3200,
+      wert: 3200,
       nextAction: 'Finanzierungsvorschlag erstellen',
-      assignedTo: 'Max Mustermann'
+      qualitaet: 'gut'
     },
     {
       id: 3,
       name: 'Sarah Schmidt',
       email: 'sarah.schmidt@email.com',
       phone: '+49 170 5555444',
-      status: 'new',
+      status: 'neu',
       source: 'Instagram',
-      category: 'PKV',
-      score: 45,
+      category: 'Krankenversicherung',
+      erfolgswahrscheinlichkeit: 45,
       lastContact: '',
       created: '2024-01-20',
       notes: 'Kontaktformular ausgefüllt. Noch keine Rückmeldung erhalten.',
-      value: 1800,
-      nextAction: 'Erstkontakt per E-Mail',
-      assignedTo: 'Max Mustermann'
+      wert: 1800,
+      nextAction: 'Ersten Kontakt herstellen',
+      qualitaet: 'okay'
     },
     {
       id: 4,
       name: 'Michael König',
       email: 'michael.koenig@email.com',
       phone: '+49 160 7777888',
-      status: 'qualified',
+      status: 'kunde',
       source: 'Empfehlung',
       category: 'Lebensversicherung',
-      score: 92,
+      erfolgswahrscheinlichkeit: 100,
       lastContact: '2024-01-19',
       created: '2024-01-15',
-      notes: 'Beratungstermin erfolgreich. Wartet auf Angebot.',
+      notes: 'Vertrag abgeschlossen! Sehr zufriedener Kunde.',
       company: 'König Consulting',
-      value: 4500,
-      nextAction: 'Angebot übermitteln',
-      assignedTo: 'Max Mustermann'
+      wert: 4500,
+      nextAction: 'Nachbetreuung und Weiterempfehlung',
+      qualitaet: 'sehr gut'
     },
     {
       id: 5,
       name: 'Lisa Wagner',
       email: 'lisa.wagner@email.com',
       phone: '+49 175 3333222',
-      status: 'cold',
+      status: 'kontaktiert',
       source: 'LinkedIn',
       category: 'Altersvorsorge',
-      score: 28,
+      erfolgswahrscheinlichkeit: 28,
       lastContact: '2024-01-18',
       created: '2024-01-14',
       notes: 'Erste Kontaktaufnahme. Geringes Interesse gezeigt.',
-      value: 800,
-      nextAction: 'Follow-up in 2 Wochen',
-      assignedTo: 'Max Mustermann'
+      wert: 800,
+      nextAction: 'In 2 Wochen nochmal nachfragen',
+      qualitaet: 'schlecht'
     }
   ])
 
-  const [selectedStatus, setSelectedStatus] = useState<string>('all')
-  const [selectedSource, setSelectedSource] = useState<string>('all')
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState<string>('created')
+  const filteredLeads = leads.filter(lead => 
+    searchTerm === '' || 
+    lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    lead.company?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
-  const filteredLeads = leads
-    .filter(lead => {
-      const statusMatch = selectedStatus === 'all' || lead.status === selectedStatus
-      const sourceMatch = selectedSource === 'all' || lead.source === selectedSource
-      const categoryMatch = selectedCategory === 'all' || lead.category === selectedCategory
-      const searchMatch = searchTerm === '' || 
-        lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.company?.toLowerCase().includes(searchTerm.toLowerCase())
-      
-      return statusMatch && sourceMatch && categoryMatch && searchMatch
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'score':
-          return b.score - a.score
-        case 'value':
-          return b.value - a.value
-        case 'name':
-          return a.name.localeCompare(b.name)
-        case 'created':
-        default:
-          return new Date(b.created).getTime() - new Date(a.created).getTime()
-      }
-    })
-
-  const statusStats = leads.reduce((acc, lead) => {
-    acc[lead.status] = (acc[lead.status] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
-
-  const totalValue = leads.reduce((sum, lead) => sum + lead.value, 0)
-
-  const updateLeadStatus = (id: number, newStatus: Lead['status']) => {
-    setLeads(leads.map(lead => 
-      lead.id === id ? { ...lead, status: newStatus, lastContact: new Date().toISOString().split('T')[0] } : lead
-    ))
+  const gesamtStats = {
+    alleInteressenten: leads.length,
+    neueInteressenten: leads.filter(l => l.status === 'neu').length,
+    heisseInteressenten: leads.filter(l => l.status === 'interessiert').length,
+    gewonneneKunden: leads.filter(l => l.status === 'kunde').length,
+    gesamtWert: leads.reduce((sum, l) => sum + l.wert, 0),
+    durchschnittErfolg: Math.round(leads.reduce((sum, l) => sum + l.erfolgswahrscheinlichkeit, 0) / leads.length)
   }
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="md:flex md:items-center md:justify-between">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-bold text-gray-900">Lead-Management</h1>
-          <p className="mt-2 text-lg text-gray-600">
-            Verwalten und qualifizieren Sie Ihre Leads professionell
-          </p>
-        </div>
-        <div className="mt-4 flex gap-3 md:mt-0 md:ml-4">
-          <Link href="/dashboard/leads/import" className="btn-secondary flex items-center gap-2">
-            <ArrowDownTrayIcon className="w-5 h-5" />
-            Importieren
+      {/* Einfacher Header */}
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-gradient-primary mb-4">👥 Ihre Interessenten</h1>
+        <p className="text-lg text-slate-600 mb-6">
+          Hier finden Sie alle Menschen, die Interesse an Ihren Produkten gezeigt haben.
+        </p>
+        
+        <div className="flex justify-center gap-4">
+          <Link href="/dashboard/leads/create" className="glass-button-primary px-8 py-4 text-lg flex items-center gap-3">
+            <PlusIcon className="w-6 h-6" />
+            Neuen Interessent hinzufügen
           </Link>
-          <Link href="/dashboard/leads/create" className="btn-primary flex items-center gap-2">
-            <PlusIcon className="w-5 h-5" />
-            Neuer Lead
-          </Link>
+          <button 
+            onClick={() => setShowHelp(!showHelp)}
+            className="glass-button-secondary px-6 py-4 flex items-center gap-2"
+          >
+            <QuestionMarkCircleIcon className="w-5 h-5" />
+            Hilfe
+          </button>
         </div>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Hilfe-Box */}
+      {showHelp && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="glass-card p-6 border-l-4 border-blue-500"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <LightBulbIcon className="w-6 h-6 text-blue-500" />
+            <h3 className="text-lg font-semibold">💡 Was sind Interessenten?</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="font-medium mb-2">🆕 Neu</div>
+              <div className="text-slate-600">Jemand hat Interesse gezeigt, aber Sie haben noch nicht gesprochen</div>
+            </div>
+            <div className="bg-yellow-50 p-4 rounded-lg">
+              <div className="font-medium mb-2">📞 Kontaktiert</div>
+              <div className="text-slate-600">Sie haben schon miteinander gesprochen oder geschrieben</div>
+            </div>
+            <div className="bg-orange-50 p-4 rounded-lg">
+              <div className="font-medium mb-2">🔥 Interessiert</div>
+              <div className="text-slate-600">Sehr gute Chance auf Abschluss - dranbleiben!</div>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg">
+              <div className="font-medium mb-2">🎉 Kunde</div>
+              <div className="text-slate-600">Hat bei Ihnen gekauft - jetzt gut betreuen!</div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Übersichtliche Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="professional-card"
+          className="glass-card p-4 text-center"
         >
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-primary-500 bg-opacity-10">
-              <UserGroupIcon className="h-6 w-6 text-primary-500" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Gesamt Leads</p>
-              <p className="text-2xl font-bold text-gray-900">{leads.length}</p>
-            </div>
-          </div>
+          <UserGroupIcon className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+          <div className="text-xl font-bold text-slate-800">{gesamtStats.alleInteressenten}</div>
+          <div className="text-xs text-slate-600">Alle Interessenten</div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="professional-card"
+          className="glass-card p-4 text-center"
         >
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-red-500 bg-opacity-10">
-              <div className="h-6 w-6 text-red-500 font-bold flex items-center justify-center text-sm">H</div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Heiße Leads</p>
-              <p className="text-2xl font-bold text-gray-900">{statusStats.hot || 0}</p>
-            </div>
-          </div>
+          <div className="w-8 h-8 text-blue-500 mx-auto mb-2 flex items-center justify-center text-lg">🆕</div>
+          <div className="text-xl font-bold text-slate-800">{gesamtStats.neueInteressenten}</div>
+          <div className="text-xs text-slate-600">Neue</div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="professional-card"
+          className="glass-card p-4 text-center"
         >
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-success-500 bg-opacity-10">
-              <CheckCircleIcon className="h-6 w-6 text-success-500" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Qualifiziert</p>
-              <p className="text-2xl font-bold text-gray-900">{statusStats.qualified || 0}</p>
-            </div>
-          </div>
+          <FireIcon className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+          <div className="text-xl font-bold text-slate-800">{gesamtStats.heisseInteressenten}</div>
+          <div className="text-xs text-slate-600">Heiße Kontakte</div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="professional-card"
+          className="glass-card p-4 text-center"
         >
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-purple-500 bg-opacity-10">
-              <CurrencyEuroIcon className="h-6 w-6 text-purple-500" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Gesamt Wert</p>
-              <p className="text-2xl font-bold text-gray-900">€{totalValue.toLocaleString()}</p>
-            </div>
-          </div>
+          <CheckCircleIcon className="w-8 h-8 text-green-500 mx-auto mb-2" />
+          <div className="text-xl font-bold text-slate-800">{gesamtStats.gewonneneKunden}</div>
+          <div className="text-xs text-slate-600">Neue Kunden</div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="glass-card p-4 text-center"
+        >
+          <CurrencyEuroIcon className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+          <div className="text-xl font-bold text-slate-800">€{gesamtStats.gesamtWert.toLocaleString()}</div>
+          <div className="text-xs text-slate-600">Möglicher Umsatz</div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="glass-card p-4 text-center"
+        >
+          <ChartBarIcon className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+          <div className="text-xl font-bold text-slate-800">{gesamtStats.durchschnittErfolg}%</div>
+          <div className="text-xs text-slate-600">Ø Erfolgschance</div>
         </motion.div>
       </div>
 
-      {/* Filters and Search */}
-      <div className="professional-card">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Performance Auswertung */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="glass-card p-6"
+      >
+        <div className="flex items-center gap-3 mb-6">
+          <ChartBarIcon className="w-8 h-8 text-blue-500" />
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Suchen
-            </label>
-            <div className="relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="form-input pl-10"
-                placeholder="Name, E-Mail, Firma..."
-              />
+            <h2 className="text-xl font-bold text-gradient">📊 Performance-Auswertung</h2>
+            <p className="text-slate-600 text-sm">Welche Interessenten haben die beste Erfolgschance und welche brauchen Aufmerksamkeit</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Best Performer */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <h3 className="text-lg font-semibold text-green-800">🌟 Top-Interessenten</h3>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Status
-            </label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="form-select"
-            >
-              <option value="all">Alle Status</option>
-              <option value="new">Neu</option>
-              <option value="contacted">Kontaktiert</option>
-              <option value="hot">Heiß</option>
-              <option value="warm">Warm</option>
-              <option value="cold">Kalt</option>
-              <option value="qualified">Qualifiziert</option>
-              <option value="converted">Konvertiert</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Quelle
-            </label>
-            <select
-              value={selectedSource}
-              onChange={(e) => setSelectedSource(e.target.value)}
-              className="form-select"
-            >
-              <option value="all">Alle Quellen</option>
-              <option value="Facebook Ads">Facebook Ads</option>
-              <option value="Google Ads">Google Ads</option>
-              <option value="Instagram">Instagram</option>
-              <option value="LinkedIn">LinkedIn</option>
-              <option value="Empfehlung">Empfehlung</option>
-              <option value="Website">Website</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Kategorie
-            </label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="form-select"
-            >
-              <option value="all">Alle Kategorien</option>
-              <option value="Altersvorsorge">Altersvorsorge</option>
-              <option value="Baufinanzierung">Baufinanzierung</option>
-              <option value="PKV">PKV</option>
-              <option value="Lebensversicherung">Lebensversicherung</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Sortieren nach
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="form-select"
-            >
-              <option value="created">Erstellungsdatum</option>
-              <option value="score">Lead-Score</option>
-              <option value="value">Wert</option>
-              <option value="name">Name</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Leads Table */}
-      <div className="professional-card">
-        <div className="professional-card-header">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Leads ({filteredLeads.length})
-          </h3>
-          <div className="flex items-center gap-2">
-            <button className="btn-secondary text-sm">
-              <FunnelIcon className="w-4 h-4 mr-1" />
-              Filter
-            </button>
-            <Link href="/dashboard/export" className="btn-secondary text-sm">
-              Export
-            </Link>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Lead
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Kontakt
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Score
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Kategorie
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Wert
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nächste Aktion
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Aktionen
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredLeads.map((lead) => (
-                <motion.tr
-                  key={lead.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="hover:bg-gray-50"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
+            
+            {leads
+              .filter(l => l.qualitaet === 'sehr gut' || l.erfolgswahrscheinlichkeit >= 70)
+              .sort((a, b) => b.erfolgswahrscheinlichkeit - a.erfolgswahrscheinlichkeit)
+              .slice(0, 2)
+              .map((lead) => (
+                <div key={lead.id} className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {lead.name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {lead.company && `${lead.company} • `}{lead.source}
-                      </div>
+                      <h4 className="font-semibold text-green-800">{lead.name}</h4>
+                      <div className="text-sm text-green-600">💼 {lead.category}</div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{lead.email}</div>
-                    <div className="text-sm text-gray-500">{lead.phone}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <StatusBadge status={lead.status} />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <LeadScore score={lead.score} />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {lead.category}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    €{lead.value.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{lead.nextAction}</div>
-                    <div className="text-sm text-gray-500">
-                      {lead.lastContact ? `Letzter Kontakt: ${new Date(lead.lastContact).toLocaleDateString('de-DE')}` : 'Noch kein Kontakt'}
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-green-700">{lead.erfolgswahrscheinlichkeit}%</div>
+                      <div className="text-xs text-green-600">Erfolgschance</div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button 
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Anrufen"
-                      >
-                        <PhoneIcon className="h-4 w-4" />
-                      </button>
-                      <button 
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="E-Mail senden"
-                      >
-                        <EnvelopeIcon className="h-4 w-4" />
-                      </button>
-                      <button 
-                        className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                        title="WhatsApp"
-                      >
-                        <ChatBubbleLeftRightIcon className="h-4 w-4" />
-                      </button>
-                      <Link
-                        href={`/dashboard/leads/${lead.id}`}
-                        className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                        title="Details anzeigen"
-                      >
-                        <EyeIcon className="h-4 w-4" />
-                      </Link>
-                      <Link
-                        href={`/dashboard/leads/${lead.id}/edit`}
-                        className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                        title="Bearbeiten"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </Link>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    <div className="text-center">
+                      <div className="font-bold text-green-700">€{lead.wert.toLocaleString()}</div>
+                      <div className="text-green-600 text-xs">Möglicher Umsatz</div>
                     </div>
-                  </td>
-                </motion.tr>
+                    <div className="text-center">
+                      <div className="font-bold text-green-700">{lead.source}</div>
+                      <div className="text-green-600 text-xs">Herkunft</div>
+                    </div>
+                    <div className="text-center">
+                      <StatusBadge status={lead.status} />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3 p-2 bg-green-100 rounded text-sm text-green-800">
+                    <strong>💡 Warum so gut:</strong> {lead.erfolgswahrscheinlichkeit >= 80 ? 'Sehr hohe Erfolgschance - schnell handeln!' : 'Gute Qualität - dranbleiben lohnt sich'}
+                  </div>
+                  
+                  <div className="mt-2 flex gap-2">
+                    <button className="text-xs bg-green-200 text-green-800 px-3 py-1 rounded-full hover:bg-green-300">
+                      Sofort anrufen
+                    </button>
+                    <button className="text-xs bg-green-200 text-green-800 px-3 py-1 rounded-full hover:bg-green-300">
+                      Termin vereinbaren
+                    </button>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+              
+            {leads.filter(l => l.qualitaet === 'sehr gut').length === 0 && (
+              <div className="text-center py-8 text-slate-500">
+                <div className="text-4xl mb-2">🎯</div>
+                <div className="text-sm">Noch keine Top-Interessenten</div>
+                <div className="text-xs">Arbeiten Sie an der Qualität Ihrer Leads</div>
+              </div>
+            )}
+          </div>
+
+          {/* Attention Needed */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <h3 className="text-lg font-semibold text-red-800">⚠️ Brauchen Aufmerksamkeit</h3>
+            </div>
+            
+            {leads
+              .filter(l => l.status === 'neu' || l.erfolgswahrscheinlichkeit < 50 || l.qualitaet === 'schlecht')
+              .sort((a, b) => a.erfolgswahrscheinlichkeit - b.erfolgswahrscheinlichkeit)
+              .slice(0, 2)
+              .map((lead) => (
+                <div key={lead.id} className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h4 className="font-semibold text-red-800">{lead.name}</h4>
+                      <div className="text-sm text-red-600">💼 {lead.category}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-red-700">{lead.erfolgswahrscheinlichkeit}%</div>
+                      <div className="text-xs text-red-600">Erfolgschance</div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    <div className="text-center">
+                      <div className="font-bold text-red-700">€{lead.wert.toLocaleString()}</div>
+                      <div className="text-red-600 text-xs">Möglicher Umsatz</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-bold text-red-700">{lead.source}</div>
+                      <div className="text-red-600 text-xs">Herkunft</div>
+                    </div>
+                    <div className="text-center">
+                      <StatusBadge status={lead.status} />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3 p-2 bg-red-100 rounded text-sm text-red-800">
+                    <strong>⚠️ Das Problem:</strong> {
+                      lead.status === 'neu' ? 'Noch kein Kontakt hergestellt' :
+                      lead.erfolgswahrscheinlichkeit < 30 ? 'Sehr geringe Erfolgschance' :
+                      'Interesse scheint gering zu sein'
+                    }
+                  </div>
+                  
+                  <div className="mt-2 flex gap-2">
+                    {lead.status === 'neu' ? (
+                      <button className="text-xs bg-red-200 text-red-800 px-3 py-1 rounded-full hover:bg-red-300">
+                        Ersten Kontakt herstellen
+                      </button>
+                    ) : (
+                      <button className="text-xs bg-red-200 text-red-800 px-3 py-1 rounded-full hover:bg-red-300">
+                        Interesse wecken
+                      </button>
+                    )}
+                    <button className="text-xs bg-red-200 text-red-800 px-3 py-1 rounded-full hover:bg-red-300">
+                      Notizen aktualisieren
+                    </button>
+                  </div>
+                </div>
+              ))}
+              
+            {leads.filter(l => l.status === 'neu' || l.erfolgswahrscheinlichkeit < 50).length === 0 && (
+              <div className="text-center py-8 text-slate-500">
+                <div className="text-4xl mb-2">👍</div>
+                <div className="text-sm">Alle Interessenten sind gut betreut!</div>
+                <div className="text-xs">Keine Problemfälle gefunden</div>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Performance Insights */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <LightBulbIcon className="w-5 h-5 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-blue-800">💡 Tipp des Tages</h3>
+            </div>
+            <p className="text-sm text-blue-700">
+              Interessenten mit über 70% Erfolgschance sollten Sie sofort kontaktieren. 
+              Die Wahrscheinlichkeit sinkt mit der Zeit!
+            </p>
+          </div>
+          
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <ChartBarIcon className="w-5 h-5 text-purple-600" />
+              </div>
+              <h3 className="font-semibold text-purple-800">📈 Ihre Zahlen</h3>
+            </div>
+            <p className="text-sm text-purple-700">
+              Durchschnittliche Erfolgschance: {gesamtStats.durchschnittErfolg}%
+              <br />
+              <span className="text-xs">Gut sind 60-80%</span>
+            </p>
+          </div>
+          
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircleIcon className="w-5 h-5 text-green-600" />
+              </div>
+              <h3 className="font-semibold text-green-800">🎯 Nächste Schritte</h3>
+            </div>
+            <p className="text-sm text-green-700">
+              {leads.filter(l => l.status === 'neu').length > 0 
+                ? 'Kontaktieren Sie zuerst alle neuen Interessenten.'
+                : leads.filter(l => l.status === 'interessiert').length > 0
+                ? 'Konzentrieren Sie sich auf Ihre heißen Kontakte.'
+                : 'Generieren Sie neue Interessenten durch Werbung.'
+              }
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Einfache Suche */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+        className="glass-card p-6"
+      >
+        <div className="flex items-center gap-4 mb-6">
+          <MagnifyingGlassIcon className="w-6 h-6 text-slate-600" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Interessent suchen (Name, E-Mail, Firma...)"
+          />
+        </div>
+
+        <h2 className="text-xl font-bold text-gradient mb-6">📋 Alle Ihre Interessenten ({filteredLeads.length})</h2>
+        
+        <div className="space-y-4">
+          {filteredLeads.map((lead, index) => (
+            <motion.div
+              key={lead.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.8 + index * 0.1 }}
+              className="border border-slate-200 rounded-xl p-6 hover:shadow-lg transition-all"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <StatusIcon status={lead.status} />
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800">{lead.name}</h3>
+                    <div className="flex items-center gap-4 text-sm text-slate-600 mt-1">
+                      <span>📧 {lead.email}</span>
+                      <span>📞 {lead.phone}</span>
+                      {lead.company && <span>🏢 {lead.company}</span>}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <QualitaetsBadge qualitaet={lead.qualitaet} />
+                  <StatusBadge status={lead.status} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold text-slate-800">{lead.erfolgswahrscheinlichkeit}%</div>
+                  <div className="text-xs text-slate-600">Erfolgschance</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold text-green-600">€{lead.wert.toLocaleString()}</div>
+                  <div className="text-xs text-slate-600">Möglicher Umsatz</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold text-blue-600">{lead.category}</div>
+                  <div className="text-xs text-slate-600">Interessiert an</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold text-purple-600">{lead.source}</div>
+                  <div className="text-xs text-slate-600">Herkunft</div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-lg p-3 mb-4">
+                <div className="text-sm font-medium text-slate-800 mb-1">📝 Nächste Aktion:</div>
+                <div className="text-sm text-slate-600">{lead.nextAction}</div>
+                {lead.lastContact && (
+                  <div className="text-xs text-slate-500 mt-1">
+                    Letzter Kontakt: {new Date(lead.lastContact).toLocaleDateString('de-DE')}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors" title="Anrufen">
+                  <PhoneIcon className="w-4 h-4" />
+                </button>
+                <button className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors" title="E-Mail senden">
+                  <EnvelopeIcon className="w-4 h-4" />
+                </button>
+                <button className="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-colors" title="WhatsApp">
+                  <ChatBubbleLeftRightIcon className="w-4 h-4" />
+                </button>
+                <Link
+                  href={`/dashboard/leads/${lead.id}`}
+                  className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors" 
+                  title="Details anzeigen"
+                >
+                  <EyeIcon className="w-4 h-4" />
+                </Link>
+                
+                <div className="ml-auto">
+                  <ErfolgsAnzeige wahrscheinlichkeit={lead.erfolgswahrscheinlichkeit} />
+                </div>
+              </div>
+
+              {lead.erfolgswahrscheinlichkeit >= 80 && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                  <FireIcon className="w-5 h-5 text-green-500" />
+                  <div className="text-sm text-green-700">
+                    <span className="font-medium">Heißer Kontakt!</span> Sehr hohe Erfolgschance - sofort handeln!
+                  </div>
+                  <button className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full hover:bg-green-200">
+                    Jetzt anrufen
+                  </button>
+                </div>
+              )}
+
+              {lead.status === 'neu' && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
+                  <CalendarDaysIcon className="w-5 h-5 text-blue-500" />
+                  <div className="text-sm text-blue-700">
+                    <span className="font-medium">Neuer Interessent!</span> Kontaktieren Sie ihn innerhalb von 24 Stunden.
+                  </div>
+                  <button className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200">
+                    Kontakt herstellen
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          ))}
         </div>
 
         {filteredLeads.length === 0 && (
           <div className="text-center py-12">
-            <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">
-              Keine Leads gefunden
+            <UserGroupIcon className="mx-auto h-16 w-16 text-slate-400 mb-4" />
+            <h3 className="text-lg font-medium text-slate-900 mb-2">
+              Keine Interessenten gefunden
             </h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Passen Sie Ihre Filter an oder erstellen Sie einen neuen Lead.
+            <p className="text-slate-600 mb-6">
+              Ändern Sie Ihre Suche oder fügen Sie einen neuen Interessenten hinzu.
             </p>
-            <div className="mt-6">
-              <Link href="/dashboard/leads/create" className="btn-primary">
-                <PlusIcon className="w-4 h-4 mr-2" />
-                Neuer Lead
-              </Link>
-            </div>
+            <Link href="/dashboard/leads/create" className="glass-button-primary px-6 py-3">
+              Ersten Interessenten hinzufügen
+            </Link>
           </div>
         )}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="professional-card"
-        >
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">📞 Heute kontaktieren</h3>
-          <div className="space-y-2">
-            {leads.filter(lead => lead.status === 'new' || lead.status === 'hot').slice(0, 3).map(lead => (
-              <div key={lead.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                <span className="text-sm font-medium">{lead.name}</span>
-                <div className="flex gap-1">
-                  <button className="p-1 text-green-600 hover:bg-green-100 rounded">
-                    <PhoneIcon className="h-3 w-3" />
-                  </button>
-                  <button className="p-1 text-blue-600 hover:bg-blue-100 rounded">
-                    <EnvelopeIcon className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="professional-card"
-        >
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">⚡ Follow-up erforderlich</h3>
-          <div className="space-y-2">
-            {leads.filter(lead => lead.status === 'contacted' || lead.status === 'warm').slice(0, 3).map(lead => (
-              <div key={lead.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                <span className="text-sm font-medium">{lead.name}</span>
-                <span className="text-xs text-gray-500">
-                  {lead.lastContact ? new Date(lead.lastContact).toLocaleDateString('de-DE') : 'Kein Datum'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="professional-card"
-        >
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 Top Performer</h3>
-          <div className="space-y-2">
-            {leads.sort((a, b) => b.score - a.score).slice(0, 3).map(lead => (
-              <div key={lead.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                <span className="text-sm font-medium">{lead.name}</span>
-                <LeadScore score={lead.score} />
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
+      </motion.div>
     </div>
   )
-}
-
-import { ArrowDownTrayIcon, CheckCircleIcon, CurrencyEuroIcon } from '@heroicons/react/24/outline' 
+} 

@@ -14,7 +14,9 @@ import {
   Bars3Icon,
   XMarkIcon,
   BellIcon,
-  UserCircleIcon
+  UserCircleIcon,
+  AcademicCapIcon,
+  ShareIcon
 } from '@heroicons/react/24/outline'
 
 interface SidebarItemProps {
@@ -52,8 +54,10 @@ export default function DashboardLayout({
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+    { name: 'KI-Vertriebstraining', href: '/dashboard/sales-training', icon: AcademicCapIcon },
     { name: 'Anzeigen-Tool', href: '/dashboard/ads', icon: MegaphoneIcon },
     { name: 'Landingpages', href: '/dashboard/landingpages', icon: DocumentTextIcon },
+    { name: 'Social Media', href: '/dashboard/social-media', icon: ShareIcon },
     { name: 'Lead-Management', href: '/dashboard/leads', icon: UserGroupIcon },
     { name: 'Analytics', href: '/dashboard/analytics', icon: ChartBarIcon },
     { name: 'Export', href: '/dashboard/export', icon: ArrowDownTrayIcon },

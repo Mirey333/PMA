@@ -13,7 +13,8 @@ import {
   PlusIcon,
   ArrowRightIcon,
   ArrowDownTrayIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  AcademicCapIcon
 } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
 
@@ -139,6 +140,13 @@ export default function Dashboard() {
   ]
 
   const quickActions = [
+    {
+      title: 'KI-Vertriebstraining',
+      description: 'Verkaufskompetenzen mit KI-Coaching verbessern',
+      href: '/dashboard/sales-training',
+      icon: AcademicCapIcon,
+      color: 'bg-blue-500'
+    },
     {
       title: 'Neue Kampagne erstellen',
       description: 'Starten Sie eine neue Werbekampagne',
