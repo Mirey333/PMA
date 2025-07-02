@@ -16,7 +16,8 @@ import {
   BellIcon,
   UserCircleIcon,
   AcademicCapIcon,
-  ShareIcon
+  ShareIcon,
+  ChatBubbleLeftEllipsisIcon
 } from '@heroicons/react/24/outline'
 
 interface SidebarItemProps {
@@ -59,6 +60,7 @@ export default function DashboardLayout({
     { name: 'Landingpages', href: '/dashboard/landingpages', icon: DocumentTextIcon },
     { name: 'Social Media', href: '/dashboard/social-media', icon: ShareIcon },
     { name: 'Lead-Management', href: '/dashboard/leads', icon: UserGroupIcon },
+    { name: 'Nachrichten', href: '/dashboard/messages', icon: ChatBubbleLeftEllipsisIcon },
     { name: 'Analytics', href: '/dashboard/analytics', icon: ChartBarIcon },
     { name: 'Export', href: '/dashboard/export', icon: ArrowDownTrayIcon },
     { name: 'Einstellungen', href: '/dashboard/settings', icon: CogIcon },
