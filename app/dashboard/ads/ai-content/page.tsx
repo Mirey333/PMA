@@ -10,7 +10,7 @@ import {
   DocumentTextIcon,
   ClockIcon,
   PlayIcon,
-  DownloadIcon,
+  ArrowDownTrayIcon,
   ShareIcon,
   EyeIcon,
   HeartIcon,
@@ -18,7 +18,7 @@ import {
   ArrowPathIcon,
   CheckCircleIcon,
   FireIcon,
-  TrendingUpIcon,
+  ArrowTrendingUpIcon,
   BoltIcon,
   StarIcon
 } from '@heroicons/react/24/outline'
@@ -239,7 +239,7 @@ export default function AIContentGenerator() {
             <div className="text-slate-600 text-sm">Generierte Contents</div>
           </div>
           <div className="glass-card p-6 text-center">
-            <TrendingUpIcon className="w-8 h-8 text-green-500 mx-auto mb-3" />
+            <ArrowTrendingUpIcon className="w-8 h-8 text-green-500 mx-auto mb-3" />
             <div className="text-2xl font-bold text-gradient-primary">2.4M</div>
             <div className="text-slate-600 text-sm">Gesamt-Reichweite</div>
           </div>
@@ -511,7 +511,7 @@ export default function AIContentGenerator() {
                           <EyeIcon className="w-4 h-4" />
                         </button>
                         <button className="glass-button-secondary p-2 text-xs">
-                          <DownloadIcon className="w-4 h-4" />
+                          <ArrowDownTrayIcon className="w-4 h-4" />
                         </button>
                         <button className="glass-button-primary p-2 text-xs flex-1">
                           <ShareIcon className="w-4 h-4 mr-1" />
